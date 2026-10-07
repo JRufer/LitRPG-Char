@@ -87,7 +87,9 @@ npm run tauri dev
 
 ### Running the Native Executable Directly
 ```bash
-./src-tauri/target/debug/tauri-app
+./src-tauri/target/release/litrpg-codex
+# or for debug build:
+./src-tauri/target/debug/litrpg-codex
 ```
 
 ### Running the Test Suite
@@ -95,8 +97,36 @@ npm run tauri dev
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-### Building Release Package
+### Building for Arch Linux Distribution
+To build the release binary and bundle:
 ```bash
 npm run tauri build
 ```
-The compiled binary will be placed in `src-tauri/target/release/tauri-app`.
+
+This generates two distribution options:
+
+#### Option 1: Standalone Portable AppImage (Recommended for Sharing)
+- **Path**: `src-tauri/target/release/bundle/appimage/LitRPG-Codex_0.1.0_amd64.AppImage`
+- **How to share**: Simply send this single `.AppImage` file to any Arch Linux user (or any Linux user).
+- **How they run it**:
+  ```bash
+  chmod +x LitRPG-Codex_0.1.0_amd64.AppImage
+  ./LitRPG-Codex_0.1.0_amd64.AppImage
+  ```
+
+#### Option 2: Lightweight Standalone Binary
+- **Path**: `src-tauri/target/release/litrpg-codex` (~9.7 MB)
+- **Requirements on other Arch systems**: Requires `webkit2gtk-4.1` and `gtk3` installed via pacman (`sudo pacman -S webkit2gtk-4.1 gtk3`).
+- **How they run it**:
+  ```bash
+  chmod +x litrpg-codex
+  ./litrpg-codex
+  ```
+
+#### Option 3: Arch Linux Native Package (Pacman / AUR)
+Inside `packaging/arch/`:
+```bash
+cd packaging/arch
+makepkg -si
+```
+This builds and installs `litrpg-codex` into `/usr/bin/litrpg-codex`, adds desktop application menu entries, and associates the LitRPG Codex app icon.

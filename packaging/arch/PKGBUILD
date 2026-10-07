@@ -1,0 +1,21 @@
+# Maintainer: LitRPG Codex Team
+pkgname=litrpg-codex-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Character sheet storage, progression tracker, and lookup codex for LitRPG chronicles"
+arch=('x86_64')
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3')
+provides=('litrpg-codex')
+conflicts=('litrpg-codex')
+
+package() {
+    # Binary
+    install -Dm755 "${srcdir}/../../src-tauri/target/release/litrpg-codex" "${pkgdir}/usr/bin/litrpg-codex"
+
+    # Desktop entry
+    install -Dm644 "${srcdir}/litrpg-codex.desktop" "${pkgdir}/usr/share/applications/litrpg-codex.desktop"
+
+    # App icon
+    install -Dm644 "${srcdir}/../../src-tauri/icons/icon.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/litrpg-codex.png"
+}

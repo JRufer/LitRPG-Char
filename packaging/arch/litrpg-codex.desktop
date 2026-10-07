@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=LitRPG Codex
+Comment=Character sheet storage and progression tracker for LitRPG chronicles
+Exec=litrpg-codex
+Icon=litrpg-codex
+Terminal=false
+Type=Application
+Categories=Utility;Game;
+StartupWMClass=LitRPG-Codex
