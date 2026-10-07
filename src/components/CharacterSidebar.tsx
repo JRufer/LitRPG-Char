@@ -9,6 +9,7 @@ import {
   Coins,
   ArrowUpCircle,
   Zap,
+  Pencil,
 } from "lucide-react";
 
 interface CharacterSidebarProps {
@@ -16,6 +17,7 @@ interface CharacterSidebarProps {
   chapter: Chapter;
   onUpdateChapterState: (updater: (prev: Chapter) => Chapter) => void;
   onOpenLevelUp: () => void;
+  onRenameCharacter: () => void;
 }
 
 export const CharacterSidebar: React.FC<CharacterSidebarProps> = ({
@@ -23,6 +25,7 @@ export const CharacterSidebar: React.FC<CharacterSidebarProps> = ({
   chapter,
   onUpdateChapterState,
   onOpenLevelUp,
+  onRenameCharacter,
 }) => {
   // Live calculated NEXT exp
   const nextExp = calculateNextExp(chapter.level, chapter.exp);
@@ -91,8 +94,21 @@ export const CharacterSidebar: React.FC<CharacterSidebarProps> = ({
       {/* Hero Badge */}
       <div className="char-hero-card">
         <div className="char-header-row">
-          <div className="char-name-title">{characterName}</div>
-          <div className="char-level-badge">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+            <div className="char-name-title" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {characterName}
+            </div>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ padding: "3px 4px", color: "var(--text-muted)", flexShrink: 0 }}
+              title="Rename Character"
+              onClick={onRenameCharacter}
+            >
+              <Pencil size={13} />
+            </button>
+          </div>
+          <div className="char-level-badge" style={{ flexShrink: 0 }}>
             <Shield size={13} /> LVL {chapter.level}
           </div>
         </div>

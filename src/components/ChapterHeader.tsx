@@ -9,6 +9,7 @@ import {
   Save,
   FileJson,
   Bookmark,
+  Pencil,
 } from "lucide-react";
 
 interface ChapterHeaderProps {
@@ -16,11 +17,13 @@ interface ChapterHeaderProps {
   selectedBookId: number | null;
   onSelectBook: (id: number) => void;
   onOpenNewBook: () => void;
+  onOpenRenameBook?: () => void;
 
   characters: Character[];
   selectedCharacterId: number | null;
   onSelectCharacter: (id: number) => void;
   onOpenNewCharacter: () => void;
+  onOpenRenameCharacter?: () => void;
 
   chapters: Chapter[];
   currentChapter: Chapter | null;
@@ -37,10 +40,12 @@ export const ChapterHeader: React.FC<ChapterHeaderProps> = ({
   selectedBookId,
   onSelectBook,
   onOpenNewBook,
+  onOpenRenameBook,
   characters,
   selectedCharacterId,
   onSelectCharacter,
   onOpenNewCharacter,
+  onOpenRenameCharacter,
   chapters,
   currentChapter,
   onSelectChapter,
@@ -94,6 +99,17 @@ export const ChapterHeader: React.FC<ChapterHeaderProps> = ({
           >
             <Plus size={14} />
           </button>
+          {onOpenRenameBook && selectedBookId && (
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ padding: "2px 4px" }}
+              title="Rename Book"
+              onClick={onOpenRenameBook}
+            >
+              <Pencil size={13} />
+            </button>
+          )}
         </div>
 
         {/* Character Selector */}
@@ -120,6 +136,17 @@ export const ChapterHeader: React.FC<ChapterHeaderProps> = ({
             >
               <Plus size={14} />
             </button>
+            {onOpenRenameCharacter && selectedCharacterId && (
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ padding: "2px 4px" }}
+                title="Rename Character"
+                onClick={onOpenRenameCharacter}
+              >
+                <Pencil size={13} />
+              </button>
+            )}
           </div>
         )}
       </div>

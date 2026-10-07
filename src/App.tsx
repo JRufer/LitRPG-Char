@@ -13,6 +13,7 @@ import { NewBookModal } from "./components/NewBookModal";
 import { NewCharacterModal } from "./components/NewCharacterModal";
 import { ImportExportModal } from "./components/ImportExportModal";
 import { UnsavedChangesModal } from "./components/UnsavedChangesModal";
+import { RenameModal } from "./components/RenameModal";
 import { Shield, Wand2, Award, Bird, CheckCircle2, Sparkles, BookOpen } from "lucide-react";
 
 interface ToastNotification {
@@ -40,7 +41,20 @@ export function App() {
   const [isLevelUpOpen, setIsLevelUpOpen] = useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  const [isRenameCharOpen, setIsRenameCharOpen] = useState(false);
+  const [isRenameBookOpen, setIsRenameBookOpen] = useState(false);
+
+  // Type-safe navigation intent tracking to avoid stale closures
+  type PendingNavIntent =
+    | { type: "chapter"; chapterId: number }
+    | { type: "character"; characterId: number }
+    | { type: "book"; bookId: number }
+    | { type: "add_chapter" }
+    | { type: "new_book" }
+    | { type: "new_char" }
+    | { type: "import_export" };
+
+  const [pendingIntent, setPendingIntent] = useState<PendingNavIntent | null>(null);
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
@@ -142,15 +156,6 @@ export function App() {
     }
   }, [selectedCharacterId, loadChapters]);
 
-  // Safe Navigation Interceptor: Checks if dirty before proceeding
-  const confirmNavigation = (action: () => void) => {
-    if (isDirty) {
-      setPendingNavigation(() => action);
-      setIsUnsavedModalOpen(true);
-    } else {
-      action();
-    }
-  };
 
   // Handler: Save active chapter & ripple forward
   const handleSaveChanges = async (): Promise<boolean> => {
@@ -181,10 +186,13 @@ export function App() {
         familiars: currentChapter.familiars,
       });
 
-      // Update current chapter and snapshot
+      // Update current chapter and snapshot with the authoritative response from backend
       setCurrentChapter(res.updated_chapter);
       setSavedSnapshot(JSON.stringify(res.updated_chapter));
-      await loadChapters(selectedCharacterId, currentChapter.id);
+      if (selectedCharacterId) {
+        const freshList = await api.getChapters(selectedCharacterId);
+        setChapters(freshList);
+      }
       addToast(res.message);
       return true;
     } catch (err) {
@@ -195,19 +203,81 @@ export function App() {
     }
   };
 
+  // Authoritative chapter navigation: loads the freshly rippled chapter directly from SQLite
+  const navigateToChapter = async (chapterId: number) => {
+    try {
+      const fresh = await api.getChapter(chapterId);
+      setCurrentChapter(fresh);
+      setSavedSnapshot(JSON.stringify(fresh));
+      if (selectedCharacterId) {
+        const freshList = await api.getChapters(selectedCharacterId);
+        setChapters(freshList);
+      }
+    } catch (err) {
+      console.error("Failed to navigate to chapter:", err);
+    }
+  };
+
+  const doAddChapter = async () => {
+    if (selectedCharacterId === null) return;
+    try {
+      const newChap = await api.addChapter(selectedCharacterId);
+      await navigateToChapter(newChap.id);
+      addToast(`Created Chapter ${newChap.chapter_number} save point!`);
+    } catch (err) {
+      alert("Error adding chapter: " + err);
+    }
+  };
+
+  const executeIntent = async (intent: PendingNavIntent) => {
+    switch (intent.type) {
+      case "chapter":
+        await navigateToChapter(intent.chapterId);
+        break;
+      case "character":
+        setSelectedCharacterId(intent.characterId);
+        break;
+      case "book":
+        setSelectedBookId(intent.bookId);
+        break;
+      case "add_chapter":
+        await doAddChapter();
+        break;
+      case "new_book":
+        setIsNewBookOpen(true);
+        break;
+      case "new_char":
+        setIsNewCharOpen(true);
+        break;
+      case "import_export":
+        setIsImportExportOpen(true);
+        break;
+    }
+  };
+
+  const confirmIntent = (intent: PendingNavIntent) => {
+    if (isDirty) {
+      setPendingIntent(intent);
+      setIsUnsavedModalOpen(true);
+    } else {
+      executeIntent(intent);
+    }
+  };
+
   // Unsaved Modal Actions
   const handleSaveAndProceed = async () => {
     const success = await handleSaveChanges();
     if (success) {
       setIsUnsavedModalOpen(false);
-      if (pendingNavigation) {
-        pendingNavigation();
-        setPendingNavigation(null);
+      const intent = pendingIntent;
+      setPendingIntent(null);
+      if (intent) {
+        await executeIntent(intent);
       }
     }
   };
 
-  const handleDiscardAndProceed = () => {
+  const handleDiscardAndProceed = async () => {
     if (savedSnapshot) {
       try {
         const reverted = JSON.parse(savedSnapshot);
@@ -217,59 +287,45 @@ export function App() {
       }
     }
     setIsUnsavedModalOpen(false);
-    if (pendingNavigation) {
-      pendingNavigation();
-      setPendingNavigation(null);
+    const intent = pendingIntent;
+    setPendingIntent(null);
+    if (intent) {
+      await executeIntent(intent);
     }
   };
 
   const handleCancelNavigation = () => {
-    setPendingNavigation(null);
+    setPendingIntent(null);
     setIsUnsavedModalOpen(false);
   };
 
-  // Navigation Handlers guarded by confirmNavigation
+  // Navigation Handlers guarded by confirmIntent
   const handleSelectBook = (bookId: number) => {
-    confirmNavigation(() => setSelectedBookId(bookId));
+    confirmIntent({ type: "book", bookId });
   };
 
   const handleSelectCharacter = (charId: number) => {
-    confirmNavigation(() => setSelectedCharacterId(charId));
+    confirmIntent({ type: "character", characterId: charId });
   };
 
   const handleSelectChapter = (chapterId: number) => {
-    confirmNavigation(() => {
-      const found = chapters.find((c) => c.id === chapterId);
-      if (found) {
-        setCurrentChapter(found);
-        setSavedSnapshot(JSON.stringify(found));
-      }
-    });
+    confirmIntent({ type: "chapter", chapterId });
   };
 
   const handleAddChapter = () => {
-    confirmNavigation(async () => {
-      if (selectedCharacterId === null) return;
-      try {
-        const newChap = await api.addChapter(selectedCharacterId);
-        await loadChapters(selectedCharacterId, newChap.id);
-        addToast(`Created Chapter ${newChap.chapter_number} save point!`);
-      } catch (err) {
-        alert("Error adding chapter: " + err);
-      }
-    });
+    confirmIntent({ type: "add_chapter" });
   };
 
   const handleOpenNewBook = () => {
-    confirmNavigation(() => setIsNewBookOpen(true));
+    confirmIntent({ type: "new_book" });
   };
 
   const handleOpenNewCharacter = () => {
-    confirmNavigation(() => setIsNewCharOpen(true));
+    confirmIntent({ type: "new_char" });
   };
 
   const handleOpenImportExport = () => {
-    confirmNavigation(() => setIsImportExportOpen(true));
+    confirmIntent({ type: "import_export" });
   };
 
   // Handler: Create Book & Initial Character
@@ -305,6 +361,34 @@ export function App() {
     }
   };
 
+  // Handler: Rename Character
+  const handleRenameCharacter = async (newName: string) => {
+    if (selectedCharacterId === null) return;
+    try {
+      const updated = await api.renameCharacter(selectedCharacterId, newName);
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c))
+      );
+      addToast(`Character renamed to "${updated.name}"!`);
+    } catch (err) {
+      alert("Error renaming character: " + err);
+    }
+  };
+
+  // Handler: Rename Book
+  const handleRenameBook = async (newName: string) => {
+    if (selectedBookId === null) return;
+    try {
+      const updated = await api.renameBook(selectedBookId, newName);
+      setBooks((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+      addToast(`Book renamed to "${updated.name}"!`);
+    } catch (err) {
+      alert("Error renaming book: " + err);
+    }
+  };
+
   // Handler: Level Up
   const handleConfirmLevelUp = async (payload: LevelUpPayload) => {
     if (selectedCharacterId === null) return;
@@ -336,10 +420,12 @@ export function App() {
         selectedBookId={selectedBookId}
         onSelectBook={handleSelectBook}
         onOpenNewBook={handleOpenNewBook}
+        onOpenRenameBook={() => setIsRenameBookOpen(true)}
         characters={characters}
         selectedCharacterId={selectedCharacterId}
         onSelectCharacter={handleSelectCharacter}
         onOpenNewCharacter={handleOpenNewCharacter}
+        onOpenRenameCharacter={() => setIsRenameCharOpen(true)}
         chapters={chapters}
         currentChapter={currentChapter}
         onSelectChapter={handleSelectChapter}
@@ -361,6 +447,7 @@ export function App() {
               setCurrentChapter((prev) => (prev ? updater(prev) : null))
             }
             onOpenLevelUp={() => setIsLevelUpOpen(true)}
+            onRenameCharacter={() => setIsRenameCharOpen(true)}
           />
 
           {/* Center Main Panel */}
@@ -583,6 +670,30 @@ export function App() {
           onDiscardAndProceed={handleDiscardAndProceed}
           onCancel={handleCancelNavigation}
           isSaving={isSaving}
+        />
+      )}
+
+      {/* Rename Character Modal */}
+      {currentCharacter && (
+        <RenameModal
+          isOpen={isRenameCharOpen}
+          title="Rename Character"
+          itemType="Character"
+          currentName={currentCharacter.name}
+          onClose={() => setIsRenameCharOpen(false)}
+          onConfirm={handleRenameCharacter}
+        />
+      )}
+
+      {/* Rename Book Modal */}
+      {currentBook && (
+        <RenameModal
+          isOpen={isRenameBookOpen}
+          title="Rename Book"
+          itemType="Book"
+          currentName={currentBook.name}
+          onClose={() => setIsRenameBookOpen(false)}
+          onConfirm={handleRenameBook}
         />
       )}
 

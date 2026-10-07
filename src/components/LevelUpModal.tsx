@@ -67,7 +67,7 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "620px" }}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "760px", width: "100%" }}>
         <div className="modal-header">
           <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <ArrowUpCircle size={20} style={{ color: "#a855f7" }} /> LEVEL UP ALLOCATION
@@ -186,7 +186,7 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
                 </span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+              <div className="form-grid-4">
                 {/* STR */}
                 <div className="stat-box" style={{ flexDirection: "column", gap: "6px" }}>
                   <span className="stat-box-label">STR (+{addStr})</span>
@@ -326,7 +326,7 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
                 VITAL MAX GROWTH
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+              <div className="form-grid-3">
                 {/* Max HP */}
                 <div className="stat-box" style={{ flexDirection: "column", gap: "4px" }}>
                   <span className="vital-label hp" style={{ fontSize: "0.75rem" }}>

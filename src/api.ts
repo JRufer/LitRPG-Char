@@ -24,6 +24,10 @@ export const api = {
     await invoke("delete_book", { bookId });
   },
 
+  renameBook: async (bookId: number, newName: string): Promise<Book> => {
+    return await invoke<Book>("rename_book", { bookId, newName });
+  },
+
   getCharacters: async (bookId: number): Promise<Character[]> => {
     return await invoke<Character[]>("get_characters", { bookId });
   },
@@ -42,6 +46,10 @@ export const api = {
 
   deleteCharacter: async (characterId: number): Promise<void> => {
     await invoke("delete_character", { characterId });
+  },
+
+  renameCharacter: async (characterId: number, newName: string): Promise<Character> => {
+    return await invoke<Character>("rename_character", { characterId, newName });
   },
 
   getChapters: async (characterId: number): Promise<Chapter[]> => {

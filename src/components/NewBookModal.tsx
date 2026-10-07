@@ -97,7 +97,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "640px" }}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "760px", width: "100%" }}>
         <div className="modal-header">
           <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <BookOpen size={20} style={{ color: "var(--text-gold)" }} /> NEW BOOK CHRONICLE
@@ -110,7 +110,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             {/* Book & Character Identifiers */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">Book Title</label>
                 <div style={{ position: "relative" }}>
@@ -119,7 +119,6 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
                     required
                     placeholder="e.g. He Who Fights Monsters"
                     className="form-input"
-                    style={{ width: "100%" }}
                     value={bookName}
                     onChange={(e) => setBookName(e.target.value)}
                   />
@@ -134,7 +133,6 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
                     required
                     placeholder="e.g. Jason Asano, Alucard"
                     className="form-input"
-                    style={{ width: "100%" }}
                     value={charName}
                     onChange={(e) => setCharName(e.target.value)}
                   />
@@ -159,7 +157,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
               </div>
 
               {/* Vitals row */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "12px" }}>
+              <div className="form-grid-4" style={{ marginBottom: "12px" }}>
                 <div className="form-group">
                   <label className="form-label" style={{ color: "var(--color-hp)" }}>Initial HP</label>
                   <input
@@ -210,7 +208,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
               </div>
 
               {/* Core 4 Stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "12px" }}>
+              <div className="form-grid-4" style={{ marginBottom: "12px" }}>
                 <div className="form-group">
                   <label className="form-label">STR</label>
                   <input
@@ -261,7 +259,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
               </div>
 
               {/* EXP & Gold */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label className="form-label" style={{ color: "var(--color-exp)" }}>Initial EXP</label>
                   <input
@@ -303,7 +301,7 @@ export const NewBookModal: React.FC<NewBookModalProps> = ({
                 <Shield size={14} /> STARTER GEAR & INVENTORY
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px", gap: "10px" }}>
+              <div className="form-grid-3">
                 <div className="form-group">
                   <label className="form-label">Starter Weapon</label>
                   <input

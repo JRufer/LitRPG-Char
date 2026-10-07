@@ -1,6 +1,6 @@
-use tauri_app_lib::db::*;
-use tauri_app_lib::exp::*;
-use tauri_app_lib::models::*;
+use litrpg_codex_lib::db::*;
+use litrpg_codex_lib::exp::*;
+use litrpg_codex_lib::models::*;
 use rusqlite::Connection;
 
 fn setup_test_db() -> Connection {
@@ -370,4 +370,175 @@ fn test_export_and_import() {
     let books = list_books(&fresh_conn).expect("list books");
     assert_eq!(books.len(), 1);
     assert_eq!(books[0].name, "Cradle");
+}
+
+#[test]
+fn test_rename_character_and_book() {
+    let mut conn = setup_test_db();
+    let payload = CreateBookPayload {
+        book_name: "Original Book".to_string(),
+        character_name: "Original Character".to_string(),
+        initial_stats: InitialStatsPayload {
+            level: 1,
+            hp_current: 25,
+            hp_max: 25,
+            mp_current: 20,
+            mp_max: 20,
+            heart_current: 10,
+            heart_max: 10,
+            str: 10,
+            con: 10,
+            int_stat: 10,
+            lck: 10,
+            exp: 0,
+            gold: 0,
+            equipment: Equipment::default(),
+            inventory: vec![],
+            spells: vec![],
+            relics: vec![],
+            familiars: vec![],
+        },
+    };
+
+    let (book, character, _) = create_book_with_character(&mut conn, payload).expect("create book");
+    assert_eq!(character.name, "Original Character");
+    assert_eq!(book.name, "Original Book");
+
+    // Rename character
+    let renamed_char = rename_character(&conn, character.id, "Renamed Protagonist".to_string()).expect("rename char");
+    assert_eq!(renamed_char.name, "Renamed Protagonist");
+
+    let chars = list_characters(&conn, book.id).expect("list chars");
+    assert_eq!(chars[0].name, "Renamed Protagonist");
+
+    // Rename book
+    let renamed_book = rename_book(&conn, book.id, "Renamed Chronicle".to_string()).expect("rename book");
+    assert_eq!(renamed_book.name, "Renamed Chronicle");
+
+    let books = list_books(&conn).expect("list books");
+    assert_eq!(books[0].name, "Renamed Chronicle");
+}
+
+#[test]
+fn test_familiar_multi_chapter_add_and_remove_ripple() {
+    let mut conn = setup_test_db();
+    let payload = CreateBookPayload {
+        book_name: "LitRPG World".to_string(),
+        character_name: "Hero".to_string(),
+        initial_stats: InitialStatsPayload {
+            level: 1,
+            hp_current: 25,
+            hp_max: 25,
+            mp_current: 20,
+            mp_max: 20,
+            heart_current: 10,
+            heart_max: 10,
+            str: 10,
+            con: 10,
+            int_stat: 10,
+            lck: 10,
+            exp: 0,
+            gold: 0,
+            equipment: Equipment::default(),
+            inventory: vec![],
+            spells: vec![],
+            relics: vec![],
+            familiars: vec![],
+        },
+    };
+
+    let (_, character, chap1) = create_book_with_character(&mut conn, payload).expect("create book");
+    let chap2 = add_chapter(&mut conn, character.id).expect("add chap 2");
+    let chap3 = add_chapter(&mut conn, character.id).expect("add chap 3");
+    let chap4 = add_chapter(&mut conn, character.id).expect("add chap 4");
+
+    // All chapters start with empty familiars
+    assert_eq!(get_chapter(&conn, chap1.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap2.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap3.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap4.id).unwrap().familiars.len(), 0);
+
+    // 1. Add familiar in Chapter 2
+    let bat = Familiar {
+        id: "fam_bat".to_string(),
+        name: "Vampire Bat".to_string(),
+        description: "Scouts dark corridors".to_string(),
+        is_equipped: true,
+    };
+
+    update_chapter_with_ripple(&mut conn, UpdateChapterPayload {
+        chapter_id: chap2.id,
+        title: chap2.title,
+        notes: chap2.notes,
+        level: chap2.level,
+        hp_current: chap2.hp_current,
+        hp_max: chap2.hp_max,
+        mp_current: chap2.mp_current,
+        mp_max: chap2.mp_max,
+        heart_current: chap2.heart_current,
+        heart_max: chap2.heart_max,
+        str: chap2.str,
+        con: chap2.con,
+        int_stat: chap2.int_stat,
+        lck: chap2.lck,
+        exp: chap2.exp,
+        gold: chap2.gold,
+        equipment: chap2.equipment,
+        inventory: chap2.inventory,
+        spells: chap2.spells,
+        relics: chap2.relics,
+        familiars: vec![bat.clone()],
+    }).expect("update chapter 2 with familiar");
+
+    // Chapter 1 must NOT have the familiar
+    assert_eq!(get_chapter(&conn, chap1.id).unwrap().familiars.len(), 0);
+
+    // Chapter 2 must have the familiar equipped
+    let c2 = get_chapter(&conn, chap2.id).unwrap();
+    assert_eq!(c2.familiars.len(), 1);
+    assert_eq!(c2.familiars[0].name, "Vampire Bat");
+    assert!(c2.familiars[0].is_equipped);
+
+    // Chapter 3 must have carried forward the familiar and equipped status
+    let c3 = get_chapter(&conn, chap3.id).unwrap();
+    assert_eq!(c3.familiars.len(), 1);
+    assert_eq!(c3.familiars[0].name, "Vampire Bat");
+    assert!(c3.familiars[0].is_equipped);
+
+    // Chapter 4 must have carried forward the familiar and equipped status
+    let c4 = get_chapter(&conn, chap4.id).unwrap();
+    assert_eq!(c4.familiars.len(), 1);
+    assert_eq!(c4.familiars[0].name, "Vampire Bat");
+    assert!(c4.familiars[0].is_equipped);
+
+    // 2. Remove familiar in Chapter 2
+    update_chapter_with_ripple(&mut conn, UpdateChapterPayload {
+        chapter_id: chap2.id,
+        title: c2.title,
+        notes: c2.notes,
+        level: c2.level,
+        hp_current: c2.hp_current,
+        hp_max: c2.hp_max,
+        mp_current: c2.mp_current,
+        mp_max: c2.mp_max,
+        heart_current: c2.heart_current,
+        heart_max: c2.heart_max,
+        str: c2.str,
+        con: c2.con,
+        int_stat: c2.int_stat,
+        lck: c2.lck,
+        exp: c2.exp,
+        gold: c2.gold,
+        equipment: c2.equipment,
+        inventory: c2.inventory,
+        spells: c2.spells,
+        relics: c2.relics,
+        familiars: vec![],
+    }).expect("update chapter 2 removing familiar");
+
+    // Removal must carry forward to all later chapters (3 and 4)
+    assert_eq!(get_chapter(&conn, chap1.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap2.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap3.id).unwrap().familiars.len(), 0);
+    assert_eq!(get_chapter(&conn, chap4.id).unwrap().familiars.len(), 0);
 }

@@ -1027,13 +1027,23 @@ select option {
   border: 1px solid var(--border-glow);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 580px;
+  max-width: 760px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
   overflow: hidden;
+  box-sizing: border-box;
   animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-container form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 @keyframes modalIn {
@@ -1048,12 +1058,13 @@ select option {
 }
 
 .modal-header {
-  padding: 16px 20px;
+  padding: 16px 22px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -1064,21 +1075,26 @@ select option {
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 22px 24px;
   overflow-y: auto;
+  overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .modal-footer {
-  padding: 14px 20px;
+  padding: 14px 22px;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
   background: var(--bg-card);
+  flex-shrink: 0;
 }
 
 /* Form inputs inside modals */
@@ -1086,6 +1102,9 @@ select option {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-label {
@@ -1100,32 +1119,79 @@ select option {
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  color: var(--text-main);
+  color: #ffffff;
   padding: 8px 12px;
   font-family: var(--font-main);
   font-size: 0.9rem;
+  font-weight: 600;
   outline: none;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-input:focus {
   border-color: var(--border-accent);
+  box-shadow: 0 0 0 2px rgba(244, 196, 83, 0.15);
 }
 
 .form-textarea {
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  color: var(--text-main);
+  color: #ffffff;
   padding: 8px 12px;
   font-family: var(--font-main);
   font-size: 0.9rem;
   outline: none;
   min-height: 80px;
   resize: vertical;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-textarea:focus {
   border-color: var(--border-accent);
+  box-shadow: 0 0 0 2px rgba(244, 196, 83, 0.15);
+}
+
+/* Resilient responsive form grids that never overflow horizontally */
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .form-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Toast Notifications */

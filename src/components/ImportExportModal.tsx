@@ -96,7 +96,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "680px" }}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "760px", width: "100%" }}>
         <div className="modal-header">
           <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <FileText size={20} style={{ color: "var(--text-gold)" }} /> JSON BACKUP & RESTORE

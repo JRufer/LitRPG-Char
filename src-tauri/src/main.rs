@@ -10,5 +10,5 @@ fn main() {
         }
     }
 
-    tauri_app_lib::run()
+    litrpg_codex_lib::run()
 }

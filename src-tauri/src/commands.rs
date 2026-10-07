@@ -26,6 +26,16 @@ pub fn delete_book(book_id: i64, state: State<'_, DbState>) -> Result<(), String
 }
 
 #[tauri::command]
+pub fn rename_book(
+    book_id: i64,
+    new_name: String,
+    state: State<'_, DbState>,
+) -> Result<Book, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    db::rename_book(&conn, book_id, new_name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_characters(book_id: i64, state: State<'_, DbState>) -> Result<Vec<Character>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     db::list_characters(&conn, book_id).map_err(|e| e.to_string())
@@ -46,6 +56,16 @@ pub fn create_character(
 pub fn delete_character(character_id: i64, state: State<'_, DbState>) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     db::delete_character(&conn, character_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn rename_character(
+    character_id: i64,
+    new_name: String,
+    state: State<'_, DbState>,
+) -> Result<Character, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    db::rename_character(&conn, character_id, new_name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

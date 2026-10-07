@@ -437,9 +437,38 @@ pub fn delete_book(conn: &Connection, book_id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn rename_book(conn: &Connection, book_id: i64, new_name: String) -> Result<Book> {
+    let clean_name = new_name.trim();
+    conn.execute("UPDATE books SET name = ? WHERE id = ?", params![clean_name, book_id])?;
+    let mut stmt = conn.prepare("SELECT id, name, created_at FROM books WHERE id = ?")?;
+    let book = stmt.query_row([book_id], |row| {
+        Ok(Book {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            created_at: row.get("created_at")?,
+        })
+    })?;
+    Ok(book)
+}
+
 pub fn delete_character(conn: &Connection, character_id: i64) -> Result<()> {
     conn.execute("DELETE FROM characters WHERE id = ?", [character_id])?;
     Ok(())
+}
+
+pub fn rename_character(conn: &Connection, character_id: i64, new_name: String) -> Result<Character> {
+    let clean_name = new_name.trim();
+    conn.execute("UPDATE characters SET name = ? WHERE id = ?", params![clean_name, character_id])?;
+    let mut stmt = conn.prepare("SELECT id, book_id, name, created_at FROM characters WHERE id = ?")?;
+    let character = stmt.query_row([character_id], |row| {
+        Ok(Character {
+            id: row.get("id")?,
+            book_id: row.get("book_id")?,
+            name: row.get("name")?,
+            created_at: row.get("created_at")?,
+        })
+    })?;
+    Ok(character)
 }
 
 fn clamp_i32(val: i32, min: i32, max: i32) -> i32 {
@@ -545,23 +574,25 @@ pub fn update_chapter_with_ripple(conn: &mut Connection, payload: UpdateChapterP
     let eq_changed = payload.equipment != old_chapter.equipment;
 
     // Spells added/removed
-    let old_spell_names: HashSet<String> = old_chapter.spells.iter().map(|s| s.name.clone()).collect();
-    let new_spell_names: HashSet<String> = payload.spells.iter().map(|s| s.name.clone()).collect();
-    let spells_added: Vec<Spell> = payload.spells.iter().filter(|s| !old_spell_names.contains(&s.name)).cloned().collect();
+    let old_spell_names: HashSet<String> = old_chapter.spells.iter().map(|s| s.name.trim().to_string()).collect();
+    let new_spell_names: HashSet<String> = payload.spells.iter().map(|s| s.name.trim().to_string()).collect();
+    let spells_added: Vec<Spell> = payload.spells.iter().filter(|s| !old_spell_names.contains(s.name.trim())).cloned().collect();
     let spells_removed_names: HashSet<String> = old_spell_names.difference(&new_spell_names).cloned().collect();
 
     // Relics added/removed
-    let old_relic_names: HashSet<String> = old_chapter.relics.iter().map(|r| r.name.clone()).collect();
-    let new_relic_names: HashSet<String> = payload.relics.iter().map(|r| r.name.clone()).collect();
-    let relics_added: Vec<Relic> = payload.relics.iter().filter(|r| !old_relic_names.contains(&r.name)).cloned().collect();
+    let old_relic_names: HashSet<String> = old_chapter.relics.iter().map(|r| r.name.trim().to_string()).collect();
+    let new_relic_names: HashSet<String> = payload.relics.iter().map(|r| r.name.trim().to_string()).collect();
+    let relics_added: Vec<Relic> = payload.relics.iter().filter(|r| !old_relic_names.contains(r.name.trim())).cloned().collect();
     let relics_removed_names: HashSet<String> = old_relic_names.difference(&new_relic_names).cloned().collect();
 
     // Familiars added/removed
-    let old_fam_names: HashSet<String> = old_chapter.familiars.iter().map(|f| f.name.clone()).collect();
-    let new_fam_names: HashSet<String> = payload.familiars.iter().map(|f| f.name.clone()).collect();
-    let fams_added: Vec<Familiar> = payload.familiars.iter().filter(|f| !old_fam_names.contains(&f.name)).cloned().collect();
+    let old_fam_names: HashSet<String> = old_chapter.familiars.iter().map(|f| f.name.trim().to_string()).collect();
+    let new_fam_names: HashSet<String> = payload.familiars.iter().map(|f| f.name.trim().to_string()).collect();
+    let fams_added: Vec<Familiar> = payload.familiars.iter().filter(|f| !old_fam_names.contains(f.name.trim())).cloned().collect();
     let fams_removed_names: HashSet<String> = old_fam_names.difference(&new_fam_names).cloned().collect();
-    let equipped_fam_name = payload.familiars.iter().find(|f| f.is_equipped).map(|f| f.name.clone());
+    let equipped_fam_name = payload.familiars.iter().find(|f| f.is_equipped).map(|f| f.name.trim().to_string());
+    let old_had_equipped = old_chapter.familiars.iter().any(|f| f.is_equipped);
+    let new_has_equipped = payload.familiars.iter().any(|f| f.is_equipped);
 
     // Fetch subsequent chapters
     let mut subsequent_chapters = {
@@ -674,32 +705,51 @@ pub fn update_chapter_with_ripple(conn: &mut Connection, payload: UpdateChapterP
         }
 
         // Spells ripple
-        sub.spells.retain(|s| !spells_removed_names.contains(&s.name));
+        sub.spells.retain(|s| !spells_removed_names.contains(s.name.trim()));
         for sp in &spells_added {
-            if !sub.spells.iter().any(|s| s.name == sp.name) {
+            if !sub.spells.iter().any(|s| s.name.trim() == sp.name.trim()) {
                 sub.spells.push(sp.clone());
+            }
+        }
+        for sp in &payload.spells {
+            if let Some(sub_sp) = sub.spells.iter_mut().find(|s| s.name.trim() == sp.name.trim()) {
+                sub_sp.description = sp.description.clone();
             }
         }
 
         // Relics ripple
-        sub.relics.retain(|r| !relics_removed_names.contains(&r.name));
+        sub.relics.retain(|r| !relics_removed_names.contains(r.name.trim()));
         for rl in &relics_added {
-            if !sub.relics.iter().any(|r| r.name == rl.name) {
+            if !sub.relics.iter().any(|r| r.name.trim() == rl.name.trim()) {
                 sub.relics.push(rl.clone());
+            }
+        }
+        for rl in &payload.relics {
+            if let Some(sub_rl) = sub.relics.iter_mut().find(|r| r.name.trim() == rl.name.trim()) {
+                sub_rl.description = rl.description.clone();
             }
         }
 
         // Familiars ripple
-        sub.familiars.retain(|f| !fams_removed_names.contains(&f.name));
+        sub.familiars.retain(|f| !fams_removed_names.contains(f.name.trim()));
         for fm in &fams_added {
-            if !sub.familiars.iter().any(|f| f.name == fm.name) {
+            if !sub.familiars.iter().any(|f| f.name.trim() == fm.name.trim()) {
                 sub.familiars.push(fm.clone());
             }
         }
-        // If an equipped familiar was selected, propagate equipped status
+        for fm in &payload.familiars {
+            if let Some(sub_fm) = sub.familiars.iter_mut().find(|f| f.name.trim() == fm.name.trim()) {
+                sub_fm.description = fm.description.clone();
+            }
+        }
+        // If an equipped familiar was selected, propagate equipped status; if unequipped, propagate unequipped
         if let Some(ref eq_name) = equipped_fam_name {
             for f in &mut sub.familiars {
-                f.is_equipped = &f.name == eq_name;
+                f.is_equipped = f.name.trim() == eq_name;
+            }
+        } else if old_had_equipped && !new_has_equipped {
+            for f in &mut sub.familiars {
+                f.is_equipped = false;
             }
         }
 
